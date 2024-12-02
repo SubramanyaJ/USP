@@ -14,13 +14,18 @@ generate_prime_numbers() {
   
   PRIME2=$(openssl prime -generate -bits $(echo "$BITLENGTH - $TEMP" | bc))
   
-  echo "Prime 1: $PRIME1"
-  echo "Prime 2: $PRIME2"
+  # echo "Prime 1: $PRIME1"
+  # echo "Prime 2: $PRIME2"
 }
 
 calculate_n(){
   N=$(echo "$PRIME1*$PRIME2" | bc)
   echo $N
+}
+
+calculate_minus(){
+  PRIME1_MINUSONE=$(echo "$PRIME1 - 1" | bc)
+  PRIME2_MINUSONE=$(echo "$PRIME2 - 1" | bc)
 }
 
 # Function to calculate GCD
@@ -50,9 +55,9 @@ lcm() {
   gcd_value=$(gcd $a $b)
 
   # Calculate LCM using the formula: LCM(a, b) = |a * b| / GCD(a, b)
-  lcm_value=$(( (a * b) / gcd_value ))
+  totient_value=$(( (a * b) / gcd_value ))
 
-  echo "LCM($a, $b) = $lcm_value"
+  echo "$totient_value"
 }
 
 # Function to find the largest number of the form 2^x + 1 that is coprime with n
@@ -82,13 +87,13 @@ largest_coprime_of_form_2x_plus_1() {
     
     x=$((x + 1))
   done
-
+  echo $result
   # Output the result
-  if [ "$result" -ne -1 ]; then
-    echo "Largest coprime of the form 2^x + 1: $result"
-  else
-    echo "No coprime number of the form 2^x + 1 found."
-  fi
+  #  if [ "$result" -ne -1 ]; then
+  #   echo "Largest coprime of the form 2^x + 1: $result"
+  #else
+  # echo "No coprime number of the form 2^x + 1 found."
+  #fi
 }
 
 modulo() {
@@ -111,7 +116,7 @@ modulo() {
   d=$((a % b))
 
   # Output the result
-  echo "d = $a (mod $b) = $d"
+  echo $d
 }
 
 ascii_map() {
@@ -206,5 +211,16 @@ decode_ascii_to_text() {
     echo "Decoded text written to '$output_file'."
 }
 
-# copy_file_char_by_char ./lorem.txt ./new.txt
-decode_ascii_to_text ./new.txt ./out.txt
+# MAIN
+generate_prime_numbers 20
+# TAKE INPUT HERE
+
+GLOBAL____N=$(calculate_n)
+calculate_minus
+GLOBAL____TOTIENT=$(lcm $PRIME1_MINUSONE $PRIME2_MINUSONE)
+GLOBAL____ENC_KEY=$(largest_coprime_of_form_2x_plus_1 $GLOBAL____TOTIENT)
+
+
+echo $GLOBAL____N $GLOBAL____TOTIENT $GLOBAL____ENC_KEY
+# largest_coprime_of_form_2x_plus_1 $totient_value
+# d=$(modulo $result $totient_value)
