@@ -212,7 +212,7 @@ decode_ascii_to_text() {
 }
 
 # MAIN
-generate_prime_numbers 20
+generate_prime_numbers 24
 # TAKE INPUT HERE
 
 GLOBAL____N=$(calculate_n)

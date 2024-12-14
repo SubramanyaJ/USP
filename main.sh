@@ -206,5 +206,3 @@ decode_ascii_to_text() {
     echo "Decoded text written to '$output_file'."
 }
 
-# copy_file_char_by_char ./lorem.txt ./new.txt
-decode_ascii_to_text ./new.txt ./out.txt
