@@ -206,3 +206,25 @@ decode_ascii_to_text() {
     echo "Decoded text written to '$output_file'."
 }
 
+
+function fileChooser(){
+  dialog --clear \
+         --title "Please select file with space" \
+         --stdout --fselect "" 14 58
+}
+
+function fileChooserHelper(){
+
+  RESULT="$( fileChooser )"
+
+  while [ -d "$RESULT" ]
+  do
+    cd "$RESULT"
+    RESULT="$( fileChooser )"
+  done
+
+# Print selection
+realpath "$RESULT"
+}
+
+fileChooserHelper
