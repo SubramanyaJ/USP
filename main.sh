@@ -9,8 +9,8 @@ generate_prime_numbers() {
   
   PRIME2=$(openssl prime -generate -bits $(echo "$BITLENGTH - $TEMP" | bc))
   
-  # echo "Prime 1: $PRIME1"
-  # echo "Prime 2: $PRIME2"
+  PRIME1=$(echo "$PRIME1" | bc)
+  PRIME2=$(echo "$PRIME2" | bc)
 }
 
 calculate_n(){
@@ -216,9 +216,6 @@ process_numbers() {
 
     # Read each number from the input file
     for number in $(cat "$input_file"); do
-        # Echo the number to the terminal
-        echo "$number"
-        
         # Write the number to the output file
         fin=$(powerModulus $number $GLOBAL____DEC_KEY $GLOBAL____TOTIENT)
         printf "\x$(printf %x $fin)">> "$output_file"
@@ -285,25 +282,23 @@ modular_inverse() {
 
 
 # MAIN
-bitl=$(echo "$1" | bc)
-generate_prime_numbers $bitl
+generate_prime_numbers 20
 # TAKE INPUT HERE
+echo $PRIME1 $PRIME2
+#PRIME1=43
+#PRIME2=59
+
 
 GLOBAL____N=$(calculate_n)
-GLOBAL____N=$(echo "$GLOBAL____N" | bc)
-
 calculate_minus
-
 GLOBAL____TOTIENT=$(lcm $PRIME1_MINUSONE $PRIME2_MINUSONE)
-GLOBAL____TOTIENT=$(echo "$GLOBAL____TOTIENT" | bc)
 
-GLOBAL____ENC_KEY=$(largest_coprime_of_form_2x_plus_1 $GLOBAL____TOTIENT)
-GLOBAL____ENC_KEY=$(echo "$GLOBAL____ENC_KEY" | bc)
-
+#GLOBAL____ENC_KEY=$(largest_coprime_of_form_2x_plus_1 $GLOBAL____TOTIENT)
+GLOBAL____ENC_KEY=$( echo "13" | bc)
 GLOBAL____DEC_KEY=$(modular_inverse $GLOBAL____ENC_KEY $GLOBAL____TOTIENT)
-GLOBAL____DEC_KEY=$(echo "$GLOBAL____DEC_KEY" | bc)
 
 echo $GLOBAL____N $GLOBAL____ENC_KEY $GLOBAL____DEC_KEY $GLOBAL____TOTIENT
+
 
 copy_file_char_by_char ./lorem.txt ./enc.txt 
 process_numbers ./enc.txt ./new.txt
