@@ -221,8 +221,46 @@ calculate_minus
 GLOBAL____TOTIENT=$(lcm $PRIME1_MINUSONE $PRIME2_MINUSONE)
 GLOBAL____ENC_KEY=$(largest_coprime_of_form_2x_plus_1 $GLOBAL____TOTIENT)
 
-
 echo $GLOBAL____N $GLOBAL____TOTIENT $GLOBAL____ENC_KEY
-#largest_coprime_of_form_2x_plus_1 $totient_value
-d=$(modulo $result $totient_value)
-echo $d
+
+# Function to calculate the modular multiplicative inverse of 'a' under modulo 'm'
+modular_inverse() {
+    local a=$1
+    local m=$2
+
+    # Variables for Extended Euclidean Algorithm
+    local m0=$m
+    local x0=0
+    local x1=1
+
+    if (( m == 1 )); then
+        echo "0"
+        return
+    fi
+
+    while (( a > 1 )); do
+        # q is quotient
+        local q=$(( a / m ))
+        local t=$m
+
+        # Update m and a
+        m=$(( a % m ))
+        a=$t
+
+        # Update x0 and x1
+        t=$x0
+        x0=$(( x1 - q * x0 ))
+        x1=$t
+    done
+
+    # Make x1 positive
+    if (( x1 < 0 )); then
+        x1=$(( x1 + m0 ))
+    fi
+
+    echo "$x1"
+}
+
+GLOBAL____DEC_KEY=$(modular_inverse $GLOBAL____ENC_KEY $GLOBAL____TOTIENT)
+
+echo $GLOBAL____ENC_KEY $GLOBAL____DEC_KEY $GLOBAL____TOTIENT
