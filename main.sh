@@ -1,26 +1,26 @@
+#!/bin/bash
+
 generate_prime_numbers() {
 
   BITLENGTH=$1
-
-  # Check if the provided bit length is a positive integer
-  if ! [[ "$BITLENGTH" =~ ^[0-9]+$ ]] || [ "$BITLENGTH" -le 0 ]; then
-    echo "Invalid bit length. Please provide a positive integer."
-    return 1
-  fi
-
   TEMP=$(echo "$BITLENGTH/2" | bc)
 
   PRIME1=$(openssl prime -generate -bits $TEMP)
   
   PRIME2=$(openssl prime -generate -bits $(echo "$BITLENGTH - $TEMP" | bc))
   
-  echo "Prime 1: $PRIME1"
-  echo "Prime 2: $PRIME2"
+  # echo "Prime 1: $PRIME1"
+  # echo "Prime 2: $PRIME2"
 }
 
 calculate_n(){
   N=$(echo "$PRIME1*$PRIME2" | bc)
   echo $N
+}
+
+calculate_minus(){
+  PRIME1_MINUSONE=$(echo "$PRIME1 - 1" | bc)
+  PRIME2_MINUSONE=$(echo "$PRIME2 - 1" | bc)
 }
 
 # Function to calculate GCD
@@ -50,9 +50,9 @@ lcm() {
   gcd_value=$(gcd $a $b)
 
   # Calculate LCM using the formula: LCM(a, b) = |a * b| / GCD(a, b)
-  lcm_value=$(( (a * b) / gcd_value ))
+  totient_value=$(( (a * b) / gcd_value ))
 
-  echo "LCM($a, $b) = $lcm_value"
+  echo "$totient_value"
 }
 
 # Function to find the largest number of the form 2^x + 1 that is coprime with n
@@ -68,7 +68,8 @@ largest_coprime_of_form_2x_plus_1() {
 
   # Iterate through numbers of the form 2^x + 1
   while true; do
-    num=$((2**x + 1))
+    #num=$((2**x + 1))
+    num=$(echo "(2^$x) + 1" | bc)
     
     # If the number exceeds n, stop searching
     if [ "$num" -gt "$n" ]; then
@@ -82,13 +83,13 @@ largest_coprime_of_form_2x_plus_1() {
     
     x=$((x + 1))
   done
-
+  echo $result
   # Output the result
-  if [ "$result" -ne -1 ]; then
-    echo "Largest coprime of the form 2^x + 1: $result"
-  else
-    echo "No coprime number of the form 2^x + 1 found."
-  fi
+  #  if [ "$result" -ne -1 ]; then
+  #   echo "Largest coprime of the form 2^x + 1: $result"
+  #else
+  # echo "No coprime number of the form 2^x + 1 found."
+  #fi
 }
 
 modulo() {
@@ -111,7 +112,7 @@ modulo() {
   d=$((a % b))
 
   # Output the result
-  echo "d = $a (mod $b) = $d"
+  echo $d
 }
 
 ascii_map() {
@@ -138,26 +139,35 @@ ascii_map() {
 }
 
 # Function to calculate (a^key) % mod
+
 powerModulus() {
   # Assign arguments to variables
-  a=$1
-  key=$2
-  mod=$3
+  local a=$1
+  local key=$2
+  local mod=$3
 
   # Initialize the result to 1
-  result=1
+  local result=1
 
-  # Perform modular exponentiation (a^key) % mod
-  for i in $(seq 1 $key); 
-  do
-    result=$(( (result * a) % mod ))
+  # Reduce a modulo mod to handle large numbers
+  a=$((a % mod))
+
+  while (( key > 0 )); do
+    # If key is odd, multiply result with a and take mod
+    if (( key % 2 == 1 )); then
+      result=$(( (result * a) % mod ))
+    fi
+
+    # Halve the key (integer division)
+    key=$(( key / 2 ))
+
+    # Square a and take mod
+    a=$(( (a * a) % mod ))
   done
 
   # Output the result
   echo $result
 }
-
-
 # generate_prime_numbers <input_keylength>
 # calculate_n
 # lcm p-1 q-1
@@ -183,13 +193,40 @@ copy_file_char_by_char() {
 
     # Open the source file and write it character by character to the destination file
     while IFS= read -r -n1 char; do
-        echo -n "$(printf "%d " "'$char")" >> "$destination_file"
+        tempvar=$(printf "%d" "'$char")
+        newchar=$(powerModulus $tempvar $GLOBAL____ENC_KEY $GLOBAL____TOTIENT)
+        echo -n "$(printf "%d " "$newchar")" >> "$destination_file"
     done < "$source_file"
 
     echo "File copied successfully to $destination_file"
 }
 
-#!/bin/bash
+process_numbers() {
+    input_file=$1
+    output_file=$2
+    
+    # Check if the input file exists
+    if [[ ! -f "$input_file" ]]; then
+        echo "Input file not found!"
+        return 1
+    fi
+
+    # Clear the output file before writing new data
+    > "$output_file"
+
+    # Read each number from the input file
+    for number in $(cat "$input_file"); do
+        # Echo the number to the terminal
+        echo "$number"
+        
+        # Write the number to the output file
+        fin=$(powerModulus $number $GLOBAL____DEC_KEY $GLOBAL____TOTIENT)
+        printf "\x$(printf %x $fin)">> "$output_file"
+    done
+
+    echo "Numbers have been written to $output_file"
+}
+
 
 decode_ascii_to_text() {
     local input_file=$1
@@ -201,30 +238,72 @@ decode_ascii_to_text() {
     fi
 
     # Read the ASCII codes, convert to characters, and write to the output file
-    awk '{for(i=1;i<=NF;i++) printf "%c", $i; printf "\n"}' "$input_file" > "$output_file"
+    awk '{for(i=1;i<=NF;i++) printf "%c", $100 ; printf "\n"}' "$input_file" > "$output_file"
+
+
 
     echo "Decoded text written to '$output_file'."
 }
 
+# Function to calculate the modular multiplicative inverse of 'a' under modulo 'm'
+modular_inverse() {
+    local a=$1
+    local m=$2
 
-function fileChooser(){
-  dialog --clear \
-         --title "Please select file with space" \
-         --stdout --fselect "" 14 58
+    # Variables for Extended Euclidean Algorithm
+    local m0=$m
+    local x0=0
+    local x1=1
+
+    if (( m == 1 )); then
+        echo "0"
+        return
+    fi
+
+    while (( a > 1 )); do
+        # q is quotient
+        local q=$(( a / m ))
+        local t=$m
+
+        # Update m and a
+        m=$(( a % m ))
+        a=$t
+
+        # Update x0 and x1
+        t=$x0
+        x0=$(( x1 - q * x0 ))
+        x1=$t
+    done
+
+    # Make x1 positive
+    if (( x1 < 0 )); then
+        x1=$(( x1 + m0 ))
+    fi
+
+    echo "$x1"
 }
 
-function fileChooserHelper(){
 
-  RESULT="$( fileChooser )"
+# MAIN
+bitl=$(echo "$1" | bc)
+generate_prime_numbers $bitl
+# TAKE INPUT HERE
 
-  while [ -d "$RESULT" ]
-  do
-    cd "$RESULT"
-    RESULT="$( fileChooser )"
-  done
+GLOBAL____N=$(calculate_n)
+GLOBAL____N=$(echo "$GLOBAL____N" | bc)
 
-# Print selection
-realpath "$RESULT"
-}
+calculate_minus
 
-fileChooserHelper
+GLOBAL____TOTIENT=$(lcm $PRIME1_MINUSONE $PRIME2_MINUSONE)
+GLOBAL____TOTIENT=$(echo "$GLOBAL____TOTIENT" | bc)
+
+GLOBAL____ENC_KEY=$(largest_coprime_of_form_2x_plus_1 $GLOBAL____TOTIENT)
+GLOBAL____ENC_KEY=$(echo "$GLOBAL____ENC_KEY" | bc)
+
+GLOBAL____DEC_KEY=$(modular_inverse $GLOBAL____ENC_KEY $GLOBAL____TOTIENT)
+GLOBAL____DEC_KEY=$(echo "$GLOBAL____DEC_KEY" | bc)
+
+echo $GLOBAL____N $GLOBAL____ENC_KEY $GLOBAL____DEC_KEY $GLOBAL____TOTIENT
+
+copy_file_char_by_char ./lorem.txt ./enc.txt 
+process_numbers ./enc.txt ./new.txt

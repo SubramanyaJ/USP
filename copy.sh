@@ -3,13 +3,6 @@
 generate_prime_numbers() {
 
   BITLENGTH=$1
-
-  # Check if the provided bit length is a positive integer
-#  if ! [[ "$BITLENGTH" =~ ^[0-9]+$ ]] || [ "$BITLENGTH" -le 0 ]; then
-#    echo "Invalid bit length. Please provide a positive integer."
-#    return 1
-#  fi
-
   TEMP=$(echo "$BITLENGTH/2" | bc)
 
   PRIME1=$(openssl prime -generate -bits $TEMP)
