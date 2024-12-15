@@ -146,26 +146,35 @@ ascii_map() {
 }
 
 # Function to calculate (a^key) % mod
+
 powerModulus() {
   # Assign arguments to variables
-  a=$1
-  key=$2
-  mod=$3
+  local a=$1
+  local key=$2
+  local mod=$3
 
   # Initialize the result to 1
-  result=1
+  local result=1
 
-  # Perform modular exponentiation (a^key) % mod
-  for i in $(seq 1 $key); 
-  do
-    result=$(( (result * a) % mod ))
+  # Reduce a modulo mod to handle large numbers
+  a=$((a % mod))
+
+  while (( key > 0 )); do
+    # If key is odd, multiply result with a and take mod
+    if (( key % 2 == 1 )); then
+      result=$(( (result * a) % mod ))
+    fi
+
+    # Halve the key (integer division)
+    key=$(( key / 2 ))
+
+    # Square a and take mod
+    a=$(( (a * a) % mod ))
   done
 
   # Output the result
   echo $result
 }
-
-
 # generate_prime_numbers <input_keylength>
 # calculate_n
 # lcm p-1 q-1
@@ -191,11 +200,40 @@ copy_file_char_by_char() {
 
     # Open the source file and write it character by character to the destination file
     while IFS= read -r -n1 char; do
-        echo -n "$(printf "%d " "'$char")" >> "$destination_file"
+        tempvar=$(printf "%d" "'$char")
+        newchar=$(powerModulus $tempvar $GLOBAL____ENC_KEY $GLOBAL____TOTIENT)
+        echo -n "$(printf "%d " "$newchar")" >> "$destination_file"
     done < "$source_file"
 
     echo "File copied successfully to $destination_file"
 }
+
+process_numbers() {
+    input_file=$1
+    output_file=$2
+    
+    # Check if the input file exists
+    if [[ ! -f "$input_file" ]]; then
+        echo "Input file not found!"
+        return 1
+    fi
+
+    # Clear the output file before writing new data
+    > "$output_file"
+
+    # Read each number from the input file
+    for number in $(cat "$input_file"); do
+        # Echo the number to the terminal
+        echo "$number"
+        
+        # Write the number to the output file
+        fin=$(powerModulus $number $GLOBAL____DEC_KEY $GLOBAL____TOTIENT)
+        printf "\x$(printf %x $fin)">> "$output_file"
+    done
+
+    echo "Numbers have been written to $output_file"
+}
+
 
 decode_ascii_to_text() {
     local input_file=$1
@@ -207,7 +245,9 @@ decode_ascii_to_text() {
     fi
 
     # Read the ASCII codes, convert to characters, and write to the output file
-    awk '{for(i=1;i<=NF;i++) printf "%c", $i; printf "\n"}' "$input_file" > "$output_file"
+    awk '{for(i=1;i<=NF;i++) printf "%c", $100 ; printf "\n"}' "$input_file" > "$output_file"
+
+
 
     echo "Decoded text written to '$output_file'."
 }
@@ -269,4 +309,4 @@ echo $GLOBAL____N $GLOBAL____ENC_KEY $GLOBAL____DEC_KEY $GLOBAL____TOTIENT
 
 
 copy_file_char_by_char ./lorem.txt ./enc.txt 
-decode_ascii_to_text ./enc.txt ./new.txt
+process_numbers ./enc.txt ./new.txt
