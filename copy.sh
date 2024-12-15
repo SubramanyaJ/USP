@@ -1,3 +1,5 @@
+#!/bin/bash
+
 generate_prime_numbers() {
 
   BITLENGTH=$1
