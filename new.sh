@@ -10,16 +10,16 @@ getpassword(){
     --passwordbox "Enter your password for this operation : " 16 51 2> $tempfile
 
   PASS=$(cat $tempfile)
-  echo $PASS
 }
 
 encrypt(){
-#  openssl enc -aes-256-cbc -salt -in file.txt -out file.enc -k password
-  getpassword
+  echo $FILE
+  openssl aes-256-cbc -salt -a -e -in $FILE -out $FILE.enc -iter 2048 -k $PASS
 }
 
 decrypt(){
-  echo de
+  openssl aes-256-cbc -salt -a -d -in $FILE -iter 2048 -k $PASS >> "$FILE".dec
+
 }
 
 # 1. Get the required operation
@@ -47,9 +47,11 @@ elif [ "$CHOICE" == "About" ]; then
 else
 
   # 3. Get the required file
-  FILE=$(dialog --erase-on-exit --stdout --title "Choose a file" --fselect $HOME/ 14 48)
+  FILE=$(dialog --erase-on-exit --stdout --title "Choose a file" --fselect ./ 14 48)
   #-- The file chosen is $FILE
   #echo $FILE
+
+  getpassword
 
   if [ "$CHOICE" == "Encrypt" ]; then
     encrypt
