@@ -210,19 +210,6 @@ decode_ascii_to_text() {
     echo "Decoded text written to '$output_file'."
 }
 
-# MAIN
-#generate_prime_numbers 10
-# TAKE INPUT HERE
-PRIME1=43
-PRIME2=59
-
-GLOBAL____N=$(calculate_n)
-calculate_minus
-GLOBAL____TOTIENT=$(lcm $PRIME1_MINUSONE $PRIME2_MINUSONE)
-GLOBAL____ENC_KEY=$(largest_coprime_of_form_2x_plus_1 $GLOBAL____TOTIENT)
-
-echo $GLOBAL____N $GLOBAL____TOTIENT $GLOBAL____ENC_KEY
-
 # Function to calculate the modular multiplicative inverse of 'a' under modulo 'm'
 modular_inverse() {
     local a=$1
@@ -261,6 +248,23 @@ modular_inverse() {
     echo "$x1"
 }
 
+
+# MAIN
+# generate_prime_numbers 10
+# TAKE INPUT HERE
+PRIME1=43
+PRIME2=59
+
+GLOBAL____N=$(calculate_n)
+calculate_minus
+GLOBAL____TOTIENT=$(lcm $PRIME1_MINUSONE $PRIME2_MINUSONE)
+
+#GLOBAL____ENC_KEY=$(largest_coprime_of_form_2x_plus_1 $GLOBAL____TOTIENT)
+GLOBAL____ENC_KEY=$( echo "13" | bc)
 GLOBAL____DEC_KEY=$(modular_inverse $GLOBAL____ENC_KEY $GLOBAL____TOTIENT)
 
-echo $GLOBAL____ENC_KEY $GLOBAL____DEC_KEY $GLOBAL____TOTIENT
+echo $GLOBAL____N $GLOBAL____ENC_KEY $GLOBAL____DEC_KEY $GLOBAL____TOTIENT
+
+
+copy_file_char_by_char ./lorem.txt ./enc.txt 
+decode_ascii_to_text ./enc.txt ./new.txt
