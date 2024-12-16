@@ -13,13 +13,11 @@ getpassword(){
 }
 
 encrypt(){
-  echo $FILE
   openssl aes-256-cbc -salt -a -e -in $FILE -out $FILE.enc -iter 2048 -k $PASS
 }
 
 decrypt(){
   openssl aes-256-cbc -salt -a -d -in $FILE -iter 2048 -k $PASS >> "$FILE".dec
-
 }
 
 # 1. Get the required operation
@@ -42,7 +40,9 @@ if [ "$CHOICE" == "Exit" ]; then
   exit 0
 
 elif [ "$CHOICE" == "About" ]; then
-  echo 1
+  dialog --title "About" --erase-on-exit --clear --"$@" \
+        --msgbox "Team :\n1. Sarthaka Mitra GB\n2. Shaik Uzair Ahmed\n3. Shashank U\n4. Subramanya J\n" 10 41
+  exit 0
 
 else
 
