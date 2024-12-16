@@ -1,304 +1,62 @@
 #!/bin/bash
 
-generate_prime_numbers() {
+# 0. Functions section
+getpassword(){
+  tempfile=`(mktemp) 2>/dev/null` || tempfile=/tmp/test$$
+  trap "rm -f $tempfile" 0 $SIG_NONE $SIG_HUP $SIG_INT $SIG_QUIT $SIG_TERM
 
-  BITLENGTH=$1
-  TEMP=$(echo "$BITLENGTH/2" | bc)
+  dialog --erase-on-exit --title "INPUT BOX" --clear \
+    --insecure "$@" \
+    --passwordbox "Enter your password for this operation : " 16 51 2> $tempfile
 
-  PRIME1=$(openssl prime -generate -bits $TEMP)
-  
-  PRIME2=$(openssl prime -generate -bits $(echo "$BITLENGTH - $TEMP" | bc))
-  
-  PRIME1=$(echo "$PRIME1" | bc)
-  PRIME2=$(echo "$PRIME2" | bc)
+  PASS=$(cat $tempfile)
 }
 
-calculate_n(){
-  N=$(echo "$PRIME1*$PRIME2" | bc)
-  echo $N
+encrypt(){
+  echo $FILE
+  openssl aes-256-cbc -salt -a -e -in $FILE -out $FILE.enc -iter 2048 -k $PASS
 }
 
-calculate_minus(){
-  PRIME1_MINUSONE=$(echo "$PRIME1 - 1" | bc)
-  PRIME2_MINUSONE=$(echo "$PRIME2 - 1" | bc)
+decrypt(){
+  openssl aes-256-cbc -salt -a -d -in $FILE -iter 2048 -k $PASS >> "$FILE".dec
+
 }
 
-# Function to calculate GCD
-gcd() {
-  a=$1
-  b=$2
-  while [ "$b" -ne 0 ]; do
-    temp=$b
-    b=$((a % b))
-    a=$temp
-  done
-  echo "$a"
-}
+# 1. Get the required operation
+exec 3>&1
+CHOICE=`dialog --erase-on-exit --backtitle "File Encryption/Decryption program" \
+	--title "Choose an option" \
+	--default-item Encrypt "$@" \
+	--menu "" 19 50 6 \
+	Encrypt	        "" \
+	Decrypt		"" \
+	About		"" \
+	Exit		"" \
+2>&1 1>&3`
+returncode=$?
+exec 3>&-
+#echo $CHOICE
 
-# Function to calculate LCM (Least Common Multiple)
-lcm() {
-  a=$1
-  b=$2
+# 2. Transfer control, if-else block
+if [ "$CHOICE" == "Exit" ]; then
+  exit 0
 
-  # Ensure that both numbers are positive
-  if [ "$a" -le 0 ] || [ "$b" -le 0 ]; then
-    echo "Both numbers must be positive."
-    return 1
+elif [ "$CHOICE" == "About" ]; then
+  echo 1
+
+else
+
+  # 3. Get the required file
+  FILE=$(dialog --erase-on-exit --stdout --title "Choose a file" --fselect ./ 14 48)
+  #-- The file chosen is $FILE
+  #echo $FILE
+
+  getpassword
+
+  if [ "$CHOICE" == "Encrypt" ]; then
+    encrypt
+  elif [ "$CHOICE" == "Decrypt" ]; then
+    decrypt
   fi
+fi
 
-  # Calculate GCD of a and b
-  gcd_value=$(gcd $a $b)
-
-  # Calculate LCM using the formula: LCM(a, b) = |a * b| / GCD(a, b)
-  totient_value=$(( (a * b) / gcd_value ))
-
-  echo "$totient_value"
-}
-
-# Function to find the largest number of the form 2^x + 1 that is coprime with n
-largest_coprime_of_form_2x_plus_1() {
-  if [ $# -ne 1 ]; then
-    echo "Please provide a number."
-    return 1
-  fi
-
-  n=$1
-  x=1
-  result=-1
-
-  # Iterate through numbers of the form 2^x + 1
-  while true; do
-    #num=$((2**x + 1))
-    num=$(echo "(2^$x) + 1" | bc)
-    
-    # If the number exceeds n, stop searching
-    if [ "$num" -gt "$n" ]; then
-      break
-    fi
-
-    # Check if the number is coprime with n
-    if [ $(gcd $n $num) -eq 1 ]; then
-      result=$num
-    fi
-    
-    x=$((x + 1))
-  done
-  echo $result
-  # Output the result
-  #  if [ "$result" -ne -1 ]; then
-  #   echo "Largest coprime of the form 2^x + 1: $result"
-  #else
-  # echo "No coprime number of the form 2^x + 1 found."
-  #fi
-}
-
-modulo() {
-  # Ensure that two arguments are provided
-  if [ $# -ne 2 ]; then
-    echo "Please provide two parameters: a and b."
-    return 1
-  fi
-
-  a=$1
-  b=$2
-
-  # Check if b is zero to avoid division by zero error
-  if [ "$b" -eq 0 ]; then
-    echo "Error: Division by zero is not allowed."
-    return 1
-  fi
-
-  # Calculate a mod b
-  d=$((a % b))
-
-  # Output the result
-  echo $d
-}
-
-ascii_map() {
-  # Check if exactly one argument is provided
-  if [ $# -ne 1 ]; then
-    echo "Usage: ascii_map <character>"
-    return 1
-  fi
-
-  # Get the input character
-  char=$1
-
-  # Ensure the input is a single character
-  if [ ${#char} -ne 1 ]; then
-    echo "Error: Please provide a single character."
-    return 1
-  fi
-
-  # Use printf to get the ASCII value of the character
-  ascii_code=$(printf "%d" "'$char")
-
-  # Output the ASCII code
-  echo "$ascii_code"
-}
-
-# Function to calculate (a^key) % mod
-
-powerModulus() {
-  # Assign arguments to variables
-  local a=$1
-  local key=$2
-  local mod=$3
-
-  # Initialize the result to 1
-  local result=1
-
-  # Reduce a modulo mod to handle large numbers
-  a=$((a % mod))
-
-  while (( key > 0 )); do
-    # If key is odd, multiply result with a and take mod
-    if (( key % 2 == 1 )); then
-      result=$(( (result * a) % mod ))
-    fi
-
-    # Halve the key (integer division)
-    key=$(( key / 2 ))
-
-    # Square a and take mod
-    a=$(( (a * a) % mod ))
-  done
-
-  # Output the result
-  echo $result
-}
-# generate_prime_numbers <input_keylength>
-# calculate_n
-# lcm p-1 q-1
-# largest_coprime_of_form_2x_plus_1 (encryption key)
-# decryption_key calculate
-
-copy_file_char_by_char() {
-    # Check if the correct number of arguments are passed
-    if [ "$#" -ne 2 ]; then
-        echo "Usage: copy_file_char_by_char <source_file> <destination_file>"
-        return 1
-    fi
-
-    # Assign parameters to variables
-    source_file=$1
-    destination_file=$2
-
-    # Check if the source file exists
-    if [ ! -f "$source_file" ]; then
-        echo "Source file does not exist."
-        return 1
-    fi
-
-    # Open the source file and write it character by character to the destination file
-    while IFS= read -r -n1 char; do
-        tempvar=$(printf "%d" "'$char")
-        newchar=$(powerModulus $tempvar $GLOBAL____ENC_KEY $GLOBAL____TOTIENT)
-        echo -n "$(printf "%d " "$newchar")" >> "$destination_file"
-    done < "$source_file"
-
-    echo "File copied successfully to $destination_file"
-}
-
-process_numbers() {
-    input_file=$1
-    output_file=$2
-    
-    # Check if the input file exists
-    if [[ ! -f "$input_file" ]]; then
-        echo "Input file not found!"
-        return 1
-    fi
-
-    # Clear the output file before writing new data
-    > "$output_file"
-
-    # Read each number from the input file
-    for number in $(cat "$input_file"); do
-        # Write the number to the output file
-        fin=$(powerModulus $number $GLOBAL____DEC_KEY $GLOBAL____TOTIENT)
-        printf "\x$(printf %x $fin)">> "$output_file"
-    done
-
-    echo "Numbers have been written to $output_file"
-}
-
-
-decode_ascii_to_text() {
-    local input_file=$1
-    local output_file=$2
-
-    if [[ ! -f $input_file ]]; then
-        echo "Error: File '$input_file' not found."
-        return 1
-    fi
-
-    # Read the ASCII codes, convert to characters, and write to the output file
-    awk '{for(i=1;i<=NF;i++) printf "%c", $100 ; printf "\n"}' "$input_file" > "$output_file"
-
-
-
-    echo "Decoded text written to '$output_file'."
-}
-
-# Function to calculate the modular multiplicative inverse of 'a' under modulo 'm'
-modular_inverse() {
-    local a=$1
-    local m=$2
-
-    # Variables for Extended Euclidean Algorithm
-    local m0=$m
-    local x0=0
-    local x1=1
-
-    if (( m == 1 )); then
-        echo "0"
-        return
-    fi
-
-    while (( a > 1 )); do
-        # q is quotient
-        local q=$(( a / m ))
-        local t=$m
-
-        # Update m and a
-        m=$(( a % m ))
-        a=$t
-
-        # Update x0 and x1
-        t=$x0
-        x0=$(( x1 - q * x0 ))
-        x1=$t
-    done
-
-    # Make x1 positive
-    if (( x1 < 0 )); then
-        x1=$(( x1 + m0 ))
-    fi
-
-    echo "$x1"
-}
-
-
-# MAIN
-generate_prime_numbers 20
-# TAKE INPUT HERE
-echo $PRIME1 $PRIME2
-#PRIME1=43
-#PRIME2=59
-
-
-GLOBAL____N=$(calculate_n)
-calculate_minus
-GLOBAL____TOTIENT=$(lcm $PRIME1_MINUSONE $PRIME2_MINUSONE)
-
-#GLOBAL____ENC_KEY=$(largest_coprime_of_form_2x_plus_1 $GLOBAL____TOTIENT)
-GLOBAL____ENC_KEY=$( echo "13" | bc)
-GLOBAL____DEC_KEY=$(modular_inverse $GLOBAL____ENC_KEY $GLOBAL____TOTIENT)
-
-echo $GLOBAL____N $GLOBAL____ENC_KEY $GLOBAL____DEC_KEY $GLOBAL____TOTIENT
-
-
-copy_file_char_by_char ./lorem.txt ./enc.txt 
-process_numbers ./enc.txt ./new.txt
